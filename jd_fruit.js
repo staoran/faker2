@@ -28,6 +28,14 @@ export DO_TEN_WATER_AGAIN="" 默认再次浇水
 */
 const $ = new Env('东东农场');
 let cookiesArr = [], cookie = '', jdFruitShareArr = [], isBox = false, notify, newShareCodes, allMessage = '';
+$.sentNum = 0;
+let args_xh = {
+    /*
+     * 每多少个账号发送一次通知，默认为4
+     * 可通过环境变量控制 JD_FRUIT_SENDNUM
+     * */
+    sendNum: process.env.JD_FRUIT_SENDNUM * 1 || 4,
+}
 //助力好友分享码(最多3个,否则后面的助力失败),原因:京东农场每人每天只有3次助力机会
 //此此内容是IOS用户下载脚本到本地使用，填写互助码的地方，同一京东账号的好友互助码请使用@符号隔开。
 //下面给出两个账号的填写示例（iOS只支持2个京东账号）
@@ -72,11 +80,24 @@ const urlSchema = `openjd://virtual?params=%7B%20%22category%22:%20%22jump%22,%2
       option = {};
       await shareCodesFormat();
       await jdFruit();
+            if ($.isNode() && allMessage != '' && $.ctrTemp) {
+                if ($.index % args_xh.sendNum === 0) {
+                    $.sentNum++;
+                    console.log(`正在进行第 ${$.sentNum} 次发送通知，发送数量：${args_xh.sendNum}`)
+                    await notify.sendNotify(`${$.name}`, `${allMessage}`)
+                    allMessage = "";
+                }
+            }
+        }
     }
-  }
-  if ($.isNode() && allMessage && $.ctrTemp) {
-    await notify.sendNotify(`${$.name}`, `${allMessage}`)
-  }
+
+    if ($.isNode() && allMessage != '' && $.ctrTemp) {
+        if ((cookiesArr.length - ($.sentNum * args_xh.sendNum)) < args_xh.sendNum) {
+            console.log(`正在进行最后一次发送通知，发送数量：${(cookiesArr.length - ($.sentNum * args_xh.sendNum))}`)
+            await notify.sendNotify(`${$.name}`, `${allMessage}`)
+            allMessage = "";
+        }
+    }
 })()
     .catch((e) => {
       $.log('', `❌ ${$.name}, 失败! 原因: ${e}!`, '')
